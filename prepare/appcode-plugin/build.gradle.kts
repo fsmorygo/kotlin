@@ -30,13 +30,11 @@ val appcodeVersionRepo = rootProject.extra["versions.appcode.repo"] as String
 
 val cidrPlugin by configurations.creating
 val platformDepsZip by configurations.creating
-val cidrGradleZip by configurations.creating
 
 val pluginXmlPath = "META-INF/plugin.xml"
 val javaPsiXmlPath = "META-INF/JavaPsiPlugin.xml"
 val javaPluginXmlPath = "META-INF/JavaPlugin.xml"
 val platformDepsJarName = "kotlinNative-platformDeps.jar"
-val cidrGradleJarName = "gradle.jar"
 val resourcesJarName = "resources_en.jar"
 val pluginXmlLocation = File(buildDir, "pluginXml")
 
@@ -51,7 +49,6 @@ val projectsToShadow by extra(
 dependencies {
     cidrPlugin(project(":prepare:cidr-plugin"))
     platformDepsZip(tc("$appcodeVersionRepo:$appcodeVersion:OC-plugins/kotlinNative-platformDeps-$appcodeVersion.zip"))
-    cidrGradleZip(tc("$appcodeVersionRepo:$appcodeVersion:OC-plugins/gradle-$appcodeVersion.zip"))
 }
 
 fun renamePluginXml(plugin: Configuration, jarFile: File, toName: String) = tasks.creating {
@@ -69,29 +66,11 @@ fun renamePluginXml(plugin: Configuration, jarFile: File, toName: String) = task
 
 val kotlinPluginXml by renamePluginXml(cidrPlugin, cidrPlugin.singleFile, "KotlinPlugin.xml")
 
-val gradlePluginXml by renamePluginXml(
-    cidrGradleZip,
-    zipTree(cidrGradleZip.singleFile).matching { include("**/$cidrGradleJarName") }.singleFile,
-    "GradlePlugin.xml"
-)
-
-val cidrGradleJar by task<Zip> {
-    archiveName = cidrGradleJarName
-    from(gradlePluginXml) { into("META-INF") }
-    val cidrGradleJar = zipTree(cidrGradleZip.singleFile).matching { include("**/$cidrGradleJarName") }.singleFile
-    from(zipTree(cidrGradleJar)) {
-        exclude(pluginXmlPath)
-    }
-}
-
 val resourcesJar by task<Zip> {
     archiveName = resourcesJarName
-    val cidrJar = zipTree(cidrGradleZip.singleFile).matching { include("**/$resourcesJarName") }.singleFile
-    from(zipTree(cidrJar))
     val platformDepsJar = zipTree(platformDepsZip.singleFile).matching { include("**/$resourcesJarName") }.singleFile
     from(zipTree(platformDepsJar))
 }
-
 
 val preparePluginXml by task<Copy> {
     dependsOn(":kotlin-ultimate:appcode-native:assemble")
@@ -191,12 +170,6 @@ task<Copy>("appcodePlugin") {
     from(platformDepsJar) { into("lib") }
     from(zipTree(platformDepsZip.singleFile).files) {
         exclude("**/$platformDepsJarName")
-        exclude("**/$resourcesJarName")
-        into("lib")
-    }
-    from(cidrGradleJar) { into("lib") }
-    from(zipTree(cidrGradleZip.singleFile).files) {
-        exclude("**/$cidrGradleJarName")
         exclude("**/$resourcesJarName")
         into("lib")
     }
